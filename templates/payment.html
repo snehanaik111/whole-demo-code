@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Payment</title>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        
+        .policies-container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .terms-container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .missing-policies {
+            background-color: #f8d7da;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .missing-policies ul {
+            list-style: none;
+            padding: 0;
+        }
+        .missing-policies ul li {
+            padding: 5px 0;
+        }
+        .missing-policies ul li .warning {
+            color: red;
+            margin-left: 5px;
+        }
+        .add-details {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .add-details:hover {
+            text-decoration: underline;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .back-btn {
+            background-color: #6c757d;
+            margin-top: 20px;
+        }
+        h4 {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Complete Your Payment</h2>
+        <input type="hidden" id="amount" value="">
+        <button id="pay-button" class="btn btn-primary">Pay Now</button>
+    </div>
+    <!-- Separate container for Terms and Conditions -->
+    <div class="terms-container">
+        <h4>Razorpay Terms and Conditions</h4>
+        <p>These terms and conditions outline the rules and regulations for the use of Razorpay's services. By accessing this website and using our services, we assume you accept these terms. Do not continue to use Razorpay if you do not agree to all of the terms and conditions stated here.</p>
+        <ul>
+            <li><strong>License:</strong> Unless otherwise stated, Razorpay owns the intellectual property rights for all material on Razorpay. All intellectual property rights are reserved.</li>
+            <li><strong>Payment Processing:</strong> All payments are subject to fraud detection checks and validation processes.</li>
+            <li><strong>Refunds:</strong> Any refunds must be initiated in accordance with Razorpay's refund policies.</li>
+            <li><strong>Privacy:</strong> User privacy is protected under Razorpay's privacy policy.</li>
+        </ul>
+        <!-- Back Button -->
+        <button onclick="location.href='/'" class="btn back-btn">Back</button>
+    </div>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const plan = urlParams.get('plan');
+        const planAmounts = {
+            'basic': 1000,    // Amount in paise for $10
+            'pro': 2500,      // Amount in paise for $25
+            'enterprise': 5000 // Amount in paise for $50
+        };
+
+        document.getElementById('amount').value = planAmounts[plan];
+
+        document.getElementById('pay-button').onclick = async function() {
+            const amount = document.getElementById('amount').value;
+
+            // Request to create an order
+            const response = await fetch('/payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({ plan: plan })
+            });
+
+            const order = await response.json();
+
+            // Launch Razorpay payment
+            launchRazorpay(order.id, amount);
+        };
+
+        function launchRazorpay(order_id, amount) {
+            // Convert amount from INR to paise
+            var amountInPaise = amount * 100; // This will convert the amount to paise
+
+            var options = {
+                "key": "rzp_test_ACrGseKtLUbHjF", // Enter the Key ID generated from the Dashboard
+                "amount": amountInPaise, // Amount is in currency subunits (paise in INR)
+                "currency": "INR",
+                "name": "Innovura Technologies Pvt. Ltd.",
+                "description": "Purchase Description",
+                "order_id": order_id, // The generated order_id
+                "handler": function (response) {
+                    // Redirect to the success page with transaction details
+                    window.location.href = `/payment_success?transaction_id=${response.razorpay_payment_id}&order_id=${response.razorpay_order_id}&amount=${amount}&color=%23007bff`;
+                },
+                "prefill": {
+                    "name": "Test User",
+                    "email": "test@example.com",
+                    "contact": "9999999999"
+                },
+                
+            };
+            var rzp = new Razorpay(options);
+            rzp.open();
+        }
+        
+    </script>
+</body>
+</html>
